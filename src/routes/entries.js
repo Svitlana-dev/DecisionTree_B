@@ -4,7 +4,6 @@ import { getDb } from "../lib/mongo.js";
 
 const r = Router();
 
-// GET /api/entries
 r.get("/", async (req, res, next) => {
   try {
     const db = await getDb();
@@ -19,7 +18,6 @@ r.get("/", async (req, res, next) => {
   }
 });
 
-// POST /api/entries
 r.post("/", async (req, res, next) => {
   try {
     const {
@@ -51,7 +49,6 @@ r.post("/", async (req, res, next) => {
   }
 });
 
-// DELETE /api/entries/:id
 r.delete("/:id", async (req, res, next) => {
   try {
     const { id } = req.params;
@@ -72,7 +69,6 @@ r.delete("/:id", async (req, res, next) => {
   }
 });
 
-// DELETE /api/entries — очистити всі
 r.delete("/", async (req, res, next) => {
   try {
     const db = await getDb();

@@ -19,4 +19,8 @@ r.post("/", upload.single("file"), async (req, res) => {
   }
 });
 
+r.get("/ping", (req, res) => {
+  res.json({ ok: true, route: "upload" });
+});
+
 export default r;
