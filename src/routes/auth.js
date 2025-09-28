@@ -1,14 +1,13 @@
 import { Router } from "express";
-import bcrypt from "bcrypt";
+import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 import { ObjectId } from "mongodb";
 import { getDb } from "../lib/mongo.js";
 
 const r = Router();
 
-const issueToken = (userId) =>
-  jwt.sign({}, process.env.JWT_SECRET, {
-    subject: String(userId),
+const issueToken = (userId, email, name) =>
+  jwt.sign({ sub: String(userId), email, name }, process.env.JWT_SECRET, {
     expiresIn: process.env.JWT_EXPIRES || "7d",
   });
 
@@ -19,10 +18,7 @@ r.post("/register", async (req, res, next) => {
       return res.status(400).json({ message: "Email і пароль обовʼязкові" });
 
     const db = await getDb();
-    await db
-      .collection("users")
-      .createIndex({ email: 1 }, { unique: true })
-      .catch(() => {});
+    await db.collection("users").createIndex({ email: 1 }, { unique: true });
 
     const exists = await db
       .collection("users")
@@ -39,8 +35,13 @@ r.post("/register", async (req, res, next) => {
     };
     const { insertedId } = await db.collection("users").insertOne(userDoc);
 
-    const token = issueToken(insertedId);
-    res.status(201).json({ id: insertedId, email: userDoc.email, name, token });
+    const token = issueToken(insertedId, userDoc.email, name);
+    res.status(201).json({
+      id: insertedId,
+      email: userDoc.email,
+      name,
+      token,
+    });
   } catch (e) {
     if (e.code === 11000)
       return res.status(409).json({ message: "Email вже використовується" });
@@ -55,13 +56,20 @@ r.post("/login", async (req, res, next) => {
     const user = await db
       .collection("users")
       .findOne({ email: (email || "").toLowerCase() });
-    if (!user) return res.status(404).json({ message: "User not found" });
+    if (!user)
+      return res.status(401).json({ message: "Невірний email або пароль" });
 
     const ok = await bcrypt.compare(password || "", user.passwordHash);
-    if (!ok) return res.status(401).json({ message: "Invalid credentials" });
+    if (!ok)
+      return res.status(401).json({ message: "Невірний email або пароль" });
 
-    const token = issueToken(user._id);
-    res.json({ id: user._id, email: user.email, name: user.name || "", token });
+    const token = issueToken(user._id, user.email, user.name || "");
+    res.json({
+      id: user._id,
+      email: user.email,
+      name: user.name || "",
+      token,
+    });
   } catch (e) {
     next(e);
   }
